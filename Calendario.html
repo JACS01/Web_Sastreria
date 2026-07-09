@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendario de Entregas - Sastrería A&amp;S</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --sidebar-bg:     #d6e3f0;
+            --sidebar-active: #c3d5e8;
+            --navy:           #1a2744;
+            --gold:           #b8962e;
+            --topbar-border:  #1a2744;
+            --today-bg:       #3b5bdb;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+            color: var(--navy);
+            height: 100vh;
+            display: flex;
+            overflow: auto;
+        }
+
+        /* SIDEBAR */
+        #sidebar {
+            width: 260px; min-width: 260px;
+            background-color: var(--sidebar-bg);
+            display: flex; flex-direction: column;
+            height: 100vh;
+            overflow-y: auto; overflow-x: hidden;
+            transition: width 0.3s ease, min-width 0.3s ease;
+        }
+        #sidebar.collapsed { width: 0; min-width: 0; }
+
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: 1040;
+        }
+
+        .sidebar-logo { display: flex; justify-content: center; align-items: center; padding: 28px 16px 20px; }
+        .sidebar-logo img { object-fit: contain; }
+
+        .sidebar-nav { flex: 1; list-style: none; padding: 0; margin: 0; }
+        .sidebar-nav li a {
+            display: flex; align-items: center; gap: 18px;
+            padding: 18px 32px;
+            color: var(--navy); text-decoration: none;
+            font-size: 1.05rem; font-weight: 400;
+            transition: background 0.15s;
+        }
+        .sidebar-nav li a:hover { background-color: var(--sidebar-active); }
+        .sidebar-nav li.active a { background-color: var(--sidebar-active); font-weight: 500; }
+        .sidebar-nav li a i { font-size: 1.55rem; min-width: 32px; text-align: center; color: var(--navy); }
+        .sidebar-bottom { padding: 12px 0 24px; border-top: 1px solid rgba(26,39,68,0.12); }
+
+        /* MAIN */
+        #main { flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+        .topbar {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 28px 12px;
+            border-bottom: 2.5px solid var(--topbar-border);
+            background: #fff; flex-shrink: 0;
+        }
+        .topbar-left { display: flex; align-items: center; gap: 18px; }
+        .topbar-left i { font-size: 1.6rem; color: var(--navy); cursor: pointer; }
+        .topbar-left .bi-gear-fill { color: var(--gold); font-size: 1.7rem; }
+        .topbar-right { display: flex; align-items: center; gap: 14px; }
+        .topbar-username { font-size: 1.05rem; font-weight: 500; color: var(--navy); }
+        .topbar-avatar { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); }
+
+        /* CONTENT */
+        .content-area { flex: 1; overflow-y: auto; padding: 28px 40px 40px; background: #fff; }
+
+        .page-title {
+            font-size: 1.6rem; font-weight: 700;
+            color: var(--navy);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        /* ===== CALENDAR CONTROLS ===== */
+        .cal-controls {
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+        }
+
+        .cal-nav-btn {
+            width: 34px; height: 34px;
+            border: 1.5px solid #bbb; border-radius: 6px;
+            background: #fff; color: var(--navy);
+            font-size: 1rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.15s;
+        }
+        .cal-nav-btn:hover { background: var(--sidebar-bg); }
+
+        .cal-month-label {
+            font-size: 1.15rem; font-weight: 700;
+            color: var(--navy); min-width: 130px; text-align: center;
+        }
+
+        .cal-today-btn {
+            border: 1.5px solid #bbb; border-radius: 6px;
+            background: #fff; color: var(--navy);
+            font-size: 0.92rem; font-weight: 500;
+            padding: 6px 16px; cursor: pointer;
+            transition: background 0.15s;
+        }
+        .cal-today-btn:hover { background: var(--sidebar-bg); }
+
+        /* ===== CALENDAR TABLE ===== */
+        .cal-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 28px;
+        }
+
+        .cal-table th {
+            border: 1.5px solid #bbb;
+            padding: 10px 8px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 0.97rem;
+            color: var(--navy);
+            background: #fff;
+        }
+
+        .cal-table td {
+            border: 1.5px solid #bbb;
+            padding: 10px 8px;
+            text-align: center;
+            font-size: 0.95rem;
+            color: var(--navy);
+            height: 56px;
+            vertical-align: top;
+            cursor: pointer;
+            transition: background 0.12s;
+        }
+
+        .cal-table td:hover:not(.empty) { background: var(--sidebar-bg); }
+
+        .cal-table td.empty { background: #fff; cursor: default; }
+
+        .day-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            font-size: 0.95rem;
+        }
+
+        .day-num.today {
+            background: var(--today-bg);
+            color: #fff;
+            font-weight: 700;
+        }
+
+        /* ===== ENTREGAS DEL DÍA ===== */
+        .entregas-section {
+            border: 1.5px solid #bbb;
+            border-radius: 6px;
+            padding: 20px 24px;
+        }
+
+        .entregas-title {
+            font-size: 1.1rem; font-weight: 700;
+            color: var(--navy); margin-bottom: 16px;
+        }
+
+        .no-entregas {
+            display: flex; align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: #888; font-size: 0.97rem;
+            padding: 12px 0;
+        }
+
+        .no-entregas i { font-size: 1.4rem; }
+
+        @media (max-width: 767.98px) {
+            #sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                z-index: 1050;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                box-shadow: 4px 0 20px rgba(0,0,0,0.2);
+            }
+            #sidebar.collapsed {
+                transform: translateX(0);
+                width: 260px;
+                min-width: 260px;
+            }
+            #sidebar.collapsed + .sidebar-backdrop { display: block; }
+            .content-area { padding: 20px 16px; }
+            .cal-table th, .cal-table td { padding: 4px 2px; font-size: 0.78rem; }
+            .cal-table td { height: 40px; }
+            .day-num { width: 24px; height: 24px; font-size: 0.78rem; }
+            .topbar-username { display: none; }
+        }
+    </style>
+    <script src="js/filtro-color.js"></script>
+    <script src="js/zoom.js"></script>
+    <script src="js/accesibilidad.js"></script>
+    <script src="js/modo-oscuro.js"></script>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside id="sidebar">
+    <div class="sidebar-logo">
+        <img src="IMG/LogoA&S.png" alt="A&S Logo" width="110" height="110"
+             style="width:250px; height:250px; object-fit:contain;">
+    </div>
+    <ul class="sidebar-nav">
+        <li><a href="Home.html"><i class="bi bi-house"></i>Inicio</a></li>
+        <li><a href="clientes.html"><i class="bi bi-people-fill"></i>Clientes</a></li>
+        <li><a href="RegistrarPedido.html"><i class="bi bi-cart3"></i>Registrar Pedidos</a></li>
+        <li><a href="MisPedidos.html"><i class="bi bi-clipboard2-check"></i>Mis pedidos</a></li>
+        <li class="active"><a href="Calendario.html"><i class="bi bi-calendar3"></i>Calendario de entregas</a></li>
+    </ul>
+    <div class="sidebar-bottom">
+        <ul class="sidebar-nav" style="margin:0">
+            <li><a href="iniciarSesion.html"><i class="bi bi-box-arrow-right"></i>Cerrar Sesión</a></li>
+        </ul>
+    </div>
+</aside>
+
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+<!-- MAIN -->
+<div id="main">
+    <header class="topbar">
+        <div class="topbar-left">
+            <i class="bi bi-list" id="sidebarToggle" role="button" aria-label="Mostrar u ocultar menú"></i>
+            <i class="bi bi-gear-fill" onclick="window.location.href='Ajustes.html'" style="cursor:pointer;" title="Ajustes"></i>
+        </div>
+        <div class="topbar-right">
+            <span class="topbar-username">Administrador</span>
+            <img src="IMG/usuario.png" alt="Avatar" class="topbar-avatar" width="46" height="46" loading="lazy">
+        </div>
+    </header>
+
+    <main class="content-area">
+
+        <h1 class="page-title">Calendario de Entregas</h1>
+
+        <!-- Controles de navegación -->
+        <div class="cal-controls">
+            <button class="cal-nav-btn" id="prevMonth" title="Mes anterior">&#8249;</button>
+            <button class="cal-nav-btn" id="nextMonth" title="Mes siguiente">&#8250;</button>
+            <span class="cal-month-label" id="monthLabel"></span>
+            <button class="cal-nav-btn" id="nextMonthRight" title="Mes siguiente">&#8250;</button>
+            <button class="cal-today-btn" id="todayBtn">Hoy</button>
+        </div>
+
+        <!-- Tabla del calendario -->
+        <table class="cal-table" id="calTable">
+            <thead>
+                <tr>
+                    <th>Lun</th>
+                    <th>Mar</th>
+                    <th>Mié</th>
+                    <th>Jue</th>
+                    <th>Vie</th>
+                    <th>Sáb</th>
+                    <th>Dom</th>
+                </tr>
+            </thead>
+            <tbody id="calBody"></tbody>
+        </table>
+
+        <!-- Entregas del día -->
+        <div class="entregas-section">
+            <div class="entregas-title" id="entregasTitle">Entregas del día</div>
+            <div id="entregasContent">
+                <div class="no-entregas">
+                    <i class="bi bi-truck"></i>
+                    <span>No hay entregas</span>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<script>
+    // ===== SIDEBAR TOGGLE =====
+    document.getElementById('sidebarToggle').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('collapsed');
+    });
+
+    document.getElementById('sidebarBackdrop').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.remove('collapsed');
+    });
+
+    // ===== CALENDARIO =====
+    const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                   'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+    // Entregas de ejemplo (formato: YYYY-M-D)
+    const entregas = {
+        '2026-5-21': ['Juan Pérez - Traje'],
+        '2026-5-28': ['Luis Ramos - Traje'],
+        '2026-6-5':  ['María López - Camisa'],
+    };
+
+    let current = new Date();
+    let viewYear = current.getFullYear();
+    let viewMonth = current.getMonth(); // 0-based
+
+    function renderCalendar() {
+        const today = new Date();
+        const label = document.getElementById('monthLabel');
+        label.textContent = MESES[viewMonth] + ' ' + viewYear;
+
+        const body = document.getElementById('calBody');
+        body.innerHTML = '';
+
+        // Primer día del mes (0=Dom ... 6=Sáb), ajustado a Lun=0
+        const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+        const startOffset = (firstDay === 0) ? 6 : firstDay - 1;
+        const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+        let day = 1;
+        let started = false;
+
+        for (let row = 0; row < 6; row++) {
+            if (day > daysInMonth) break;
+            const tr = document.createElement('tr');
+            for (let col = 0; col < 7; col++) {
+                const td = document.createElement('td');
+                const cellIndex = row * 7 + col;
+                if (cellIndex < startOffset || day > daysInMonth) {
+                    td.classList.add('empty');
+                } else {
+                    const d = day;
+                    const isToday = (d === today.getDate() && viewMonth === today.getMonth() && viewYear === today.getFullYear());
+                    const key = viewYear + '-' + (viewMonth + 1) + '-' + d;
+                    const span = document.createElement('span');
+                    span.className = 'day-num' + (isToday ? ' today' : '');
+                    span.textContent = d;
+                    td.appendChild(span);
+
+                    // Indicador de entrega
+                    if (entregas[key]) {
+                        const dot = document.createElement('div');
+                        dot.style.cssText = 'width:6px;height:6px;background:var(--gold);border-radius:50%;margin:2px auto 0;';
+                        td.appendChild(dot);
+                    }
+
+                    td.addEventListener('click', () => mostrarEntregas(d, viewMonth, viewYear));
+                    day++;
+                }
+                tr.appendChild(td);
+            }
+            body.appendChild(tr);
+        }
+    }
+
+    function mostrarEntregas(d, m, y) {
+        const key = y + '-' + (m + 1) + '-' + d;
+        const titulo = document.getElementById('entregasTitle');
+        const content = document.getElementById('entregasContent');
+        titulo.textContent = 'Entregas del día ' + d + ' de ' + MESES[m] + ' ' + y;
+
+        if (entregas[key] && entregas[key].length > 0) {
+            content.innerHTML = entregas[key].map(e =>
+                '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #eee;">' +
+                '<i class="bi bi-truck" style="font-size:1.2rem;color:var(--navy);"></i>' +
+                '<span>' + e + '</span></div>'
+            ).join('');
+        } else {
+            content.innerHTML = '<div class="no-entregas"><i class="bi bi-truck"></i><span>No hay entregas</span></div>';
+        }
+    }
+
+    // Navegación
+    document.getElementById('prevMonth').addEventListener('click', () => {
+        viewMonth--;
+        if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+        renderCalendar();
+    });
+
+    document.getElementById('nextMonth').addEventListener('click', () => {
+        viewMonth++;
+        if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+        renderCalendar();
+    });
+
+    document.getElementById('nextMonthRight').addEventListener('click', () => {
+        viewMonth++;
+        if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+        renderCalendar();
+    });
+
+    document.getElementById('todayBtn').addEventListener('click', () => {
+        const now = new Date();
+        viewYear = now.getFullYear();
+        viewMonth = now.getMonth();
+        renderCalendar();
+    });
+
+    renderCalendar();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+</body>
+</html>

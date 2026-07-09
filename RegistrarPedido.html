@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Pedido - Sastrería A&amp;S</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --sidebar-bg:     #d6e3f0;
+            --sidebar-active: #c3d5e8;
+            --navy:           #1a2744;
+            --gold:           #b8962e;
+            --topbar-border:  #1a2744;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+            color: var(--navy);
+            height: 100vh;
+            display: flex;
+            overflow: auto;
+        }
+
+        /* ===== SIDEBAR ===== */
+        #sidebar {
+            width: 260px;
+            min-width: 260px;
+            background-color: var(--sidebar-bg);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            transition: width 0.3s ease, min-width 0.3s ease;
+        }
+
+        #sidebar.collapsed { width: 0; min-width: 0; }
+
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: 1040;
+        }
+
+        .sidebar-logo {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 28px 16px 20px;
+        }
+
+        .sidebar-logo img {
+            width: 200px;
+            height: 200px;
+            object-fit: contain;
+        }
+
+        .sidebar-nav { flex: 1; list-style: none; padding: 0; margin: 0; }
+
+        .sidebar-nav li a {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding: 18px 32px;
+            color: var(--navy);
+            text-decoration: none;
+            font-size: 1.05rem;
+            font-weight: 400;
+            transition: background 0.15s;
+        }
+
+        .sidebar-nav li a:hover { background-color: var(--sidebar-active); }
+        .sidebar-nav li.active a { background-color: var(--sidebar-active); font-weight: 500; }
+
+        .sidebar-nav li a i {
+            font-size: 1.55rem;
+            min-width: 32px;
+            text-align: center;
+            color: var(--navy);
+        }
+
+        .sidebar-bottom {
+            padding: 12px 0 24px;
+            border-top: 1px solid rgba(26,39,68,0.12);
+        }
+
+        /* ===== MAIN ===== */
+        #main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Topbar */
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 28px 12px;
+            border-bottom: 2.5px solid var(--topbar-border);
+            background: #fff;
+            flex-shrink: 0;
+        }
+
+        .topbar-left { display: flex; align-items: center; gap: 18px; }
+        .topbar-left i { font-size: 1.6rem; color: var(--navy); cursor: pointer; }
+        .topbar-left .bi-gear-fill { color: var(--gold); font-size: 1.7rem; }
+
+        .topbar-right { display: flex; align-items: center; gap: 14px; }
+        .topbar-username { font-size: 1.05rem; font-weight: 500; color: var(--navy); }
+
+        .topbar-avatar {
+            width: 46px; height: 46px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--gold);
+        }
+
+        /* Content */
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 32px 40px 40px;
+            background: #fff;
+        }
+
+        /* Page title */
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--navy);
+            margin-bottom: 2px;
+        }
+
+        .section-subtitle {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--navy);
+            margin-bottom: 18px;
+        }
+
+        /* Form inputs */
+        .form-input {
+            border: 1.5px solid #ccc;
+            border-radius: 6px;
+            padding: 12px 16px;
+            font-size: 0.97rem;
+            color: #555;
+            width: 100%;
+            outline: none;
+            font-family: inherit;
+            background: #fff;
+            transition: border-color 0.2s;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+
+        .form-input:focus { border-color: var(--navy); color: var(--navy); }
+
+        .select-wrap { position: relative; }
+        .select-wrap::after {
+            content: '\25BE';
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: #555;
+            font-size: 1rem;
+        }
+
+        .form-input.select-input { padding-right: 36px; cursor: pointer; }
+
+        textarea.form-input { resize: vertical; min-height: 100px; }
+
+        /* Preview image */
+        .preview-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 6px;
+            display: block;
+        }
+
+        .img-box {
+            border: 1.5px solid #ccc;
+            border-radius: 6px;
+            overflow: hidden;
+            aspect-ratio: 3 / 4;   /* proporción vertical, igual a la imagen */
+            width: 100%;
+        }
+
+        /* Botones */
+        .btn-cancelar {
+            border: 2px solid var(--gold);
+            background: #fff;
+            color: var(--navy);
+            font-weight: 700;
+            font-size: 0.97rem;
+            letter-spacing: 0.06em;
+            padding: 13px 36px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .btn-cancelar:hover { background: #f5f0e8; }
+
+        .btn-guardar {
+            background: var(--gold);
+            border: none;
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.97rem;
+            letter-spacing: 0.06em;
+            padding: 13px 36px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .btn-guardar:hover { background: #9a7010; }
+
+        @media (max-width: 767.98px) {
+            #sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                z-index: 1050;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                box-shadow: 4px 0 20px rgba(0,0,0,0.2);
+            }
+            #sidebar.collapsed {
+                transform: translateX(0);
+                width: 260px;
+                min-width: 260px;
+            }
+            #sidebar.collapsed + .sidebar-backdrop { display: block; }
+            .content-area { padding: 20px 16px; }
+            .img-box { height: 200px; margin-top: 16px; }
+            .topbar-username { display: none; }
+        }
+        @media (max-width: 575.98px) {
+            .btn-cancelar, .btn-guardar { width: 100%; }
+            .d-flex.justify-content-end.gap-3.mt-4 { flex-direction: column; }
+        }
+    </style>
+    <script src="js/filtro-color.js"></script>
+    <script src="js/zoom.js"></script>
+    <script src="js/accesibilidad.js"></script>
+    <script src="js/modo-oscuro.js"></script>
+</head>
+<body>
+
+<!-- ===== SIDEBAR ===== -->
+<aside id="sidebar">
+
+    <!-- Logo -->
+    <div class="sidebar-logo">
+        <img src="IMG/LogoA&S.png" alt="A&S Logo" width="110" height="110"
+             style="width:250px; height:250px; object-fit:contain;">
+    </div>
+
+    <!-- Nav links -->
+    <ul class="sidebar-nav">
+        <li>
+            <a href="Home.html">
+                <i class="bi bi-house"></i>
+                Inicio
+            </a>
+        </li>
+        <li>
+            <a href="clientes.html">
+                <i class="bi bi-people-fill"></i>
+                Clientes
+            </a>
+        </li>
+        <li class="active">
+            <a href="RegistrarPedido.html">
+                <i class="bi bi-cart3"></i>
+                Registrar Pedidos
+            </a>
+        </li>
+        <li>
+            <a href="MisPedidos.html">
+                <i class="bi bi-clipboard2-check"></i>
+                Mis pedidos
+            </a>
+        </li>
+        <li>
+            <a href="Calendario.html">
+                <i class="bi bi-calendar3"></i>
+                Calendario de entregas
+            </a>
+        </li>
+    </ul>
+
+    <!-- Cerrar sesión -->
+    <div class="sidebar-bottom">
+        <ul class="sidebar-nav" style="margin:0">
+            <li>
+                <a href="iniciarSesion.html">
+                    <i class="bi bi-box-arrow-right"></i>
+                    Cerrar Sesión
+                </a>
+            </li>
+        </ul>
+    </div>
+</aside>
+
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+<!-- MAIN -->
+<div id="main">
+
+    <!-- Topbar -->
+    <header class="topbar">
+        <div class="topbar-left">
+            <i class="bi bi-list" id="sidebarToggle" role="button" aria-label="Mostrar u ocultar menú"></i>
+            <i class="bi bi-gear-fill" onclick="window.location.href='Ajustes.html'" style="cursor:pointer;" title="Ajustes"></i>
+        </div>
+        <div class="topbar-right">
+            <span class="topbar-username">Administrador</span>
+            <img src="IMG/usuario.png" alt="Avatar" class="topbar-avatar" width="46" height="46" loading="lazy">
+        </div>
+    </header>
+
+    <!-- Content -->
+    <main class="content-area">
+
+        <h1 class="page-title mb-3">Registrar Nuevo pedido</h1>
+
+        <div class="row g-4">
+
+            <!-- Columna izquierda: formulario -->
+            <div class="col-lg-8">
+
+                <!-- Datos del Cliente -->
+                <p class="section-subtitle">Datos del Cliente</p>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <input type="text" class="form-input" placeholder="Nombre del cliente">
+                    </div>
+                    <div class="col-md-6">
+                        <div style="display:flex; align-items:center; border:1.5px solid #ccc; border-radius:6px; padding: 0 14px; background:#fff; transition: border-color 0.2s;" onfocusin="this.style.borderColor='#1a2744'" onfocusout="this.style.borderColor='#ccc'">
+                            <i class="bi bi-telephone" style="color:#888; margin-right:8px;"></i>
+                            <input type="tel" style="border:none; outline:none; padding:12px 0; font-size:0.97rem; color:#555; background:transparent; width:100%; font-family:inherit;" placeholder="Teléfono">
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <input type="email" class="form-input" placeholder="Correo Electrónico">
+                    </div>
+                </div>
+
+                <!-- Detalle del pedido -->
+                <p class="section-subtitle mt-3">Detalle del pedido</p>
+
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="select-wrap">
+                            <select class="form-input select-input">
+                                <option value="" disabled selected>Tipos de tela</option>
+                                <option>Lana</option>
+                                <option>Algodón</option>
+                                <option>Lino</option>
+                                <option>Poliéster</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="select-wrap">
+                            <select class="form-input select-input">
+                                <option value="" disabled selected>Tela</option>
+                                <option>Tela 1</option>
+                                <option>Tela 2</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="select-wrap">
+                            <select class="form-input select-input">
+                                <option value="" disabled selected>Medidas</option>
+                                <option>S</option>
+                                <option>M</option>
+                                <option>L</option>
+                                <option>XL</option>
+                                <option>A medida</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <textarea class="form-input" placeholder="Descripción"></textarea>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Columna derecha: imagen -->
+            <div class="col-lg-4">
+                <div class="img-box">
+                    <img
+                        src="IMG/Traje1.jpeg"
+                        alt="Vista previa del traje"
+                        class="preview-img"
+                        loading="lazy">
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Botones -->
+        <div class="d-flex justify-content-end gap-3 mt-4">
+            <button class="btn-cancelar" onclick="window.location.href='Home.html'">CANCELAR</button>
+            <button class="btn-guardar">Guardar Pedido</button>
+        </div>
+
+    </main>
+</div>
+
+<script>
+    document.getElementById('sidebarToggle').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('collapsed');
+    });
+
+    document.getElementById('sidebarBackdrop').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.remove('collapsed');
+    });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+</body>
+</html>

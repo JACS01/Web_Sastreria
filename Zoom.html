@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zoom - Sastrería A&S</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
+          crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <style>
+        :root {
+            --sidebar-bg:     #d6e3f0;
+            --sidebar-active: #c3d5e8;
+            --navy:           #1a2744;
+            --gold:           #b8962e;
+            --topbar-border:  #000000;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+            color: var(--navy);
+            height: 100vh;
+            display: flex;
+            overflow: auto;
+            background: #fff;
+        }
+
+        /* ===== SIDEBAR ===== */
+        #sidebar {
+            width: 260px; min-width: 260px;
+            background-color: var(--sidebar-bg);
+            display: flex; flex-direction: column;
+            height: 100vh;
+            overflow-y: auto; overflow-x: hidden;
+            transition: width 0.3s ease, min-width 0.3s ease;
+        }
+        #sidebar.collapsed { width: 0; min-width: 0; }
+
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: 1040;
+        }
+
+        .sidebar-logo {
+            display: flex; justify-content: center; align-items: center;
+            padding: 28px 16px 20px;
+        }
+        .sidebar-logo img { object-fit: contain; width: 250px; height: 250px; }
+
+        .sidebar-nav { flex: 1; list-style: none; padding: 0; margin: 0; }
+
+        .sidebar-nav li a {
+            display: flex; align-items: center; gap: 18px;
+            padding: 18px 32px;
+            color: var(--navy); text-decoration: none;
+            font-size: 1.05rem; font-weight: 400;
+            transition: background 0.15s;
+        }
+        .sidebar-nav li a:hover { background-color: var(--sidebar-active); }
+        .sidebar-nav li.active > a { background-color: var(--sidebar-active); font-weight: 500; }
+        .sidebar-nav li a i { font-size: 1.6rem; min-width: 32px; text-align: center; }
+
+        /* Submenu toggle */
+        .submenu-toggle {
+            display: flex; align-items: center; gap: 18px;
+            padding: 18px 32px;
+            color: var(--navy); cursor: pointer;
+            font-size: 1.05rem; font-weight: 400;
+            user-select: none;
+            transition: background 0.15s;
+        }
+        .submenu-toggle:hover { background-color: var(--sidebar-active); }
+        .submenu-toggle i.main-icon { font-size: 1.6rem; min-width: 32px; text-align: center; }
+        .submenu-toggle .chevron { margin-left: auto; font-size: 1rem; transition: transform 0.25s; }
+        .submenu-toggle.open .chevron { transform: rotate(180deg); }
+
+        .submenu {
+            list-style: none; padding: 0; margin: 0;
+            max-height: 0; overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .submenu.open { max-height: 200px; }
+        .submenu li a { padding: 14px 32px 14px 56px; font-size: 0.97rem; }
+        .submenu li a i { font-size: 1.4rem; }
+        .submenu li.active > a { background-color: var(--sidebar-active); font-weight: 500; }
+
+        .sidebar-bottom {
+            padding: 12px 0 24px;
+            border-top: 1px solid rgba(26,39,68,0.12);
+            margin-top: auto;
+        }
+
+        /* ===== MAIN ===== */
+        #main { flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+        .topbar {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 28px 12px;
+            border-bottom: 2.5px solid var(--topbar-border);
+            background: #fff; flex-shrink: 0;
+        }
+        .topbar-left { display: flex; align-items: center; gap: 18px; }
+        .topbar-left i { font-size: 1.6rem; color: #000; cursor: pointer; }
+        .topbar-left .bi-gear-fill { color: var(--gold); font-size: 1.8rem; }
+        .topbar-right { display: flex; align-items: center; gap: 14px; }
+        .topbar-username { font-size: 1.05rem; font-weight: 500; color: #000; }
+        .topbar-avatar {
+            width: 46px; height: 46px; border-radius: 50%;
+            object-fit: cover; border: 2px solid var(--gold);
+        }
+
+        /* ===== CONTENT ===== */
+        .content-area {
+            flex: 1; overflow-y: auto;
+            padding: 32px 40px 40px;
+            background: #fff;
+            display: flex; flex-direction: column;
+        }
+
+        .page-title {
+            font-size: 1.6rem; font-weight: 700;
+            color: #000; margin-bottom: 32px;
+        }
+
+        /* Zoom value display */
+        .zoom-value {
+            font-size: 4rem; font-weight: 800;
+            color: #000;
+            text-align: center;
+            margin-bottom: 28px;
+            letter-spacing: 0.02em;
+        }
+
+        /* Controles del slider */
+        .zoom-controls {
+            display: flex; align-items: center; justify-content: center;
+            gap: 20px;
+        }
+
+        .zoom-btn {
+            width: 58px; height: 58px;
+            border-radius: 50%;
+            background-color: #222;
+            color: #fff;
+            border: none;
+            font-size: 2rem;
+            line-height: 1;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: background 0.15s;
+            flex-shrink: 0;
+        }
+        .zoom-btn:hover { background-color: #444; }
+
+        .zoom-track {
+            position: relative;
+            flex: 1;
+            max-width: 340px;
+            height: 4px;
+            background: #666;
+            border-radius: 4px;
+        }
+
+        .zoom-thumb {
+            position: absolute;
+            top: 50%; transform: translate(-50%, -50%);
+            width: 18px; height: 18px;
+            background: #222;
+            border-radius: 50%;
+            left: 50%; /* posición inicial 100% = mitad del rango 50-200 */
+            cursor: grab;
+            touch-action: none;
+        }
+        .zoom-thumb::before {
+            /* área de toque más grande, invisible, para que sea fácil
+               agarrar la bolita también en pantallas táctiles */
+            content: "";
+            position: absolute;
+            inset: -14px;
+        }
+        .zoom-thumb:active { cursor: grabbing; }
+        .zoom-track { cursor: pointer; }
+
+        /* Panel de información */
+        .info-panel {
+            border: 1.5px solid #ccc;
+            border-radius: 10px;
+            padding: 22px 22px;
+            max-width: 280px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: #000;
+        }
+
+        .info-panel h3 {
+            font-size: 1.05rem; font-weight: 700;
+            text-align: center;
+            margin-bottom: 12px;
+            color: #000;
+        }
+
+        .info-panel ul {
+            padding-left: 18px;
+            margin-top: 10px;
+        }
+
+        .info-panel ul li {
+            margin-bottom: 10px;
+        }
+
+        /* Botones inferiores */
+        .footer-btns {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: auto;
+            padding-top: 36px;
+        }
+
+        .btn-restablecer {
+            border: 2.5px solid #1a2744;
+            background: #fff;
+            color: #1a2744;
+            font-weight: 700;
+            font-size: 1rem;
+            letter-spacing: 0.08em;
+            padding: 14px 48px;
+            border-radius: 6px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: background 0.15s;
+        }
+        .btn-restablecer:hover { background: #eee; }
+
+        .btn-guardar {
+            background: var(--gold);
+            border: none;
+            color: #fff;
+            font-weight: 700;
+            font-size: 1rem;
+            letter-spacing: 0.08em;
+            padding: 14px 48px;
+            border-radius: 6px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: background 0.15s;
+        }
+        .btn-guardar:hover { background: #9a7010; }
+
+        @media (max-width: 767.98px) {
+            #sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                z-index: 1050;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                box-shadow: 4px 0 20px rgba(0,0,0,0.2);
+            }
+            #sidebar.collapsed {
+                transform: translateX(0);
+                width: 260px;
+                min-width: 260px;
+            }
+            #sidebar.collapsed + .sidebar-backdrop { display: block; }
+            .content-area { padding: 20px 16px; }
+            .zoom-value { font-size: 2.6rem; }
+            .topbar-username { display: none; }
+        }
+        @media (max-width: 575.98px) {
+            .footer-btns { flex-direction: column; align-items: stretch; }
+            .btn-restablecer, .btn-guardar { width: 100%; padding: 14px 20px; }
+        }
+    </style>
+    <script src="js/filtro-color.js"></script>
+    <script src="js/zoom.js"></script>
+    <script src="js/accesibilidad.js"></script>
+    <script src="js/modo-oscuro.js"></script>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside id="sidebar">
+    <div class="sidebar-logo">
+        <img src="IMG/LogoA&S.png" alt="A&S Logo">
+    </div>
+
+    <ul class="sidebar-nav">
+        <!-- General -->
+        <li>
+            <a href="Ajustes.html">
+                <i class="bi bi-sliders"></i>
+                General
+            </a>
+        </li>
+
+        <!-- Funciones extra con submenu (cerrado en esta vista) -->
+        <li style="padding:0;">
+            <div class="submenu-toggle" id="funcToggle">
+                <i class="bi bi-gear-wide-connected main-icon"></i>
+                Funciones extra
+                <i class="bi bi-chevron-down chevron"></i>
+            </div>
+            <ul class="submenu" id="funcSubmenu">
+                <li>
+                    <a href="Accesibilidad.html">
+                        <i class="bi bi-person-arms-up"></i>
+                        Accesibilidad
+                    </a>
+                </li>
+            </ul>
+        </li>
+
+        <!-- Zoom activo directamente -->
+        <li class="active">
+            <a href="Zoom.html">
+                <i class="bi bi-search"></i>
+                Zoom
+            </a>
+        </li>
+
+        <!-- Filtro de color -->
+        <li>
+            <a href="Filtro.html">
+                <i class="bi bi-palette"></i>
+                Filtro de color
+            </a>
+        </li>
+    </ul>
+
+    <!-- Cerrar Sesión -->
+    <div class="sidebar-bottom">
+        <ul class="sidebar-nav" style="margin:0">
+            <li>
+                <a href="Home.html">
+                    <i class="bi bi-box-arrow-in-left"></i>
+                    Regresar
+                </a>
+            </li>
+        </ul>
+    </div>
+</aside>
+
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+<!-- MAIN -->
+<div id="main">
+    <header class="topbar">
+        <div class="topbar-left">
+            <i class="bi bi-list" id="sidebarToggle" role="button"
+               aria-label="Mostrar u ocultar menú"></i>
+            <i class="bi bi-gear-fill"></i>
+        </div>
+        <div class="topbar-right">
+            <span class="topbar-username">Administrador</span>
+            <img src="IMG/usuario.png" alt="Avatar" class="topbar-avatar" loading="lazy">
+        </div>
+    </header>
+
+    <main class="content-area">
+
+        <h1 class="page-title">Ajustes de Zoom</h1>
+
+        <!-- Fila principal: control + info -->
+        <div class="row g-4 flex-grow-1">
+
+            <!-- Columna izquierda: porcentaje + controles -->
+            <div class="col-lg-7 d-flex flex-column align-items-center justify-content-center">
+
+                <!-- Porcentaje -->
+                <div class="zoom-value" id="zoomDisplay">100 %</div>
+
+                <!-- Slider con botones circulares -->
+                <div class="zoom-controls w-100">
+                    <button class="zoom-btn" id="zoomMinus" aria-label="Reducir zoom">
+                        &minus;
+                    </button>
+
+                    <div class="zoom-track">
+                        <div class="zoom-thumb" id="zoomThumb"></div>
+                    </div>
+
+                    <button class="zoom-btn" id="zoomPlus" aria-label="Aumentar zoom">
+                        &#43;
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Columna derecha: panel de información -->
+            <div class="col-lg-5 d-flex align-items-center justify-content-center">
+                <div class="info-panel">
+                    <h3>Información</h3>
+                    <p>Aumento o disminuye el tamaño de los elementos de la interfaz</p>
+                    <ul>
+                        <li>100 % es el tamaño estándar</li>
+                        <li>Los cambios se aplicarán en todas las pestañas</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Botones pie -->
+        <div class="footer-btns">
+            <button class="btn-restablecer" id="btnRestablecer">Restablecer</button>
+            <button class="btn-guardar" id="btnGuardarZoom">Guardar Cambios</button>
+        </div>
+        <p id="zoomGuardadoMsg" style="text-align:center; color:#2e7d32; font-weight:600; margin-top:14px; opacity:0; transition:opacity .3s;">
+            Cambios guardados
+        </p>
+
+    </main>
+</div>
+
+<script>
+    // Sidebar toggle
+    document.getElementById('sidebarToggle').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('collapsed');
+    });
+
+    document.getElementById('sidebarBackdrop').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.remove('collapsed');
+    });
+
+    // Submenu Funciones extra
+    const funcToggle  = document.getElementById('funcToggle');
+    const funcSubmenu = document.getElementById('funcSubmenu');
+    funcToggle.addEventListener('click', () => {
+        funcToggle.classList.toggle('open');
+        funcSubmenu.classList.toggle('open');
+    });
+
+    // ===== Zoom: conexión con ASZoom (js/zoom.js) =====
+    const STEP = 10;
+    const MIN  = ASZoom.MIN;   // 50
+    const MAX  = ASZoom.MAX;   // 200
+
+    // Se inicia con el valor ya guardado (o 100 % si no hay ninguno)
+    let zoomValue = ASZoom.obtener();
+
+    const display     = document.getElementById('zoomDisplay');
+    const thumb       = document.getElementById('zoomThumb');
+    const msjGuardado = document.getElementById('zoomGuardadoMsg');
+    let msjTimeout;
+
+    function updateZoom() {
+        display.textContent = zoomValue + ' %';
+        // Posición del thumb: 0% = MIN, 100% = MAX
+        const pct = (zoomValue - MIN) / (MAX - MIN) * 100;
+        thumb.style.left = pct + '%';
+        // Vista previa en vivo en esta misma pantalla
+        ASZoom.previsualizar(zoomValue);
+    }
+
+    function mostrarMensajeGuardado() {
+        msjGuardado.style.opacity = '1';
+        clearTimeout(msjTimeout);
+        msjTimeout = setTimeout(() => { msjGuardado.style.opacity = '0'; }, 1800);
+    }
+
+    document.getElementById('zoomPlus').addEventListener('click', () => {
+        if (zoomValue < MAX) { zoomValue += STEP; updateZoom(); }
+    });
+
+    document.getElementById('zoomMinus').addEventListener('click', () => {
+        if (zoomValue > MIN) { zoomValue -= STEP; updateZoom(); }
+    });
+
+    // Restablecer: vuelve a 100 %, lo aplica y lo guarda de una vez
+    document.getElementById('btnRestablecer').addEventListener('click', () => {
+        zoomValue = ASZoom.restablecer();
+        updateZoom();
+        mostrarMensajeGuardado();
+    });
+
+    // Guardar Cambios: persiste el valor actual para todas las páginas
+    document.getElementById('btnGuardarZoom').addEventListener('click', () => {
+        zoomValue = ASZoom.guardar(zoomValue);
+        mostrarMensajeGuardado();
+    });
+
+    // Inicializar posición del thumb y porcentaje mostrado
+    updateZoom();
+
+    // ===== Arrastrar la bolita para elegir el porcentaje =====
+    const track = document.querySelector('.zoom-track');
+    let arrastrando = false;
+
+    function porcentajeDesdeEvento(e) {
+        const rect = track.getBoundingClientRect();
+        const clientX = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
+        let pct = (clientX - rect.left) / rect.width * 100;
+        return Math.min(100, Math.max(0, pct));
+    }
+
+    function valorDesdePorcentaje(pct) {
+        return Math.round(MIN + (pct / 100) * (MAX - MIN));
+    }
+
+    function moverA(e) {
+        const pct = porcentajeDesdeEvento(e);
+        zoomValue = valorDesdePorcentaje(pct);
+        updateZoom();
+    }
+
+    function iniciarArrastre(e) {
+        arrastrando = true;
+        moverA(e);
+        e.preventDefault();
+    }
+
+    function duranteArrastre(e) {
+        if (!arrastrando) return;
+        moverA(e);
+    }
+
+    function terminarArrastre() {
+        arrastrando = false;
+    }
+
+    thumb.addEventListener('mousedown', iniciarArrastre);
+    thumb.addEventListener('touchstart', iniciarArrastre, { passive: false });
+
+    // Clic directo en la barra para saltar a ese punto
+    track.addEventListener('mousedown', (e) => {
+        if (e.target === thumb) return;
+        iniciarArrastre(e);
+    });
+    track.addEventListener('touchstart', (e) => {
+        if (e.target === thumb) return;
+        iniciarArrastre(e);
+    }, { passive: false });
+
+    document.addEventListener('mousemove', duranteArrastre);
+    document.addEventListener('touchmove', duranteArrastre, { passive: false });
+    document.addEventListener('mouseup', terminarArrastre);
+    document.addEventListener('touchend', terminarArrastre);
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+        crossorigin="anonymous"></script>
+</body>
+</html>
